@@ -104,9 +104,10 @@ func Attention(seed int64, fft bool) int {
 	set.Add("bb", 1, 1)
 
 	if fft {
-		weights, weight := MakeWeightsFFT(rnd, 2+2+1+1), 0
 		for _, w := range set.Weights[:2] {
 			factor := math.Sqrt(2.0 / float64(w.S[0]))
+			weights, weight := MakeWeightsFFT(rnd, cap(w.X)), 0
+			fmt.Println(weights)
 			for i := 0; i < cap(w.X); i++ {
 				w.X = append(w.X, weights[weight]*factor)
 				weight++
@@ -229,9 +230,9 @@ func Regular(seed int64, fft bool) int {
 	set.Add("bb", 1, 1)
 
 	if fft {
-		weights, weight := MakeWeightsFFT(rnd, 2*2+2+2+1), 0
 		for _, w := range set.Weights[:2] {
 			factor := math.Sqrt(2.0 / float64(w.S[0]))
+			weights, weight := MakeWeightsFFT(rnd, cap(w.X)), 0
 			for i := 0; i < cap(w.X); i++ {
 				w.X = append(w.X, weights[weight]*factor)
 				weight++
