@@ -107,7 +107,6 @@ func Attention(seed int64, fft bool) int {
 		for _, w := range set.Weights[:2] {
 			factor := math.Sqrt(2.0 / float64(w.S[0]))
 			weights, weight := MakeWeightsFFT(rnd, cap(w.X)), 0
-			fmt.Println(weights)
 			for i := 0; i < cap(w.X); i++ {
 				w.X = append(w.X, weights[weight]*factor)
 				weight++
