@@ -9,6 +9,7 @@ import (
 	"math"
 	"math/rand"
 
+	"github.com/mjibson/go-dsp/fft"
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/vg"
@@ -18,23 +19,69 @@ import (
 )
 
 func main() {
-	Attention(1)
-	Regular(1)
+	Attention(1, false)
+	Regular(1, false)
+	Attention(1, true)
+	Regular(1, true)
 
 	attention := 0.0
 	for i := 0; i < 128; i++ {
-		attention += float64(Attention(int64(2 + i)))
+		attention += float64(Attention(int64(2+i), false))
+	}
+	attentionFFT := 0.0
+	for i := 0; i < 128; i++ {
+		attentionFFT += float64(Attention(int64(2+i), true))
 	}
 	regular := 0.0
 	for i := 0; i < 128; i++ {
-		regular += float64(Regular(int64(2 + i)))
+		regular += float64(Regular(int64(2+i), false))
+	}
+	regularFFT := 0.0
+	for i := 0; i < 128; i++ {
+		regularFFT += float64(Regular(int64(2+i), true))
 	}
 	fmt.Println("Attention:", attention/128)
+	fmt.Println("Attention FFT:", attentionFFT/128)
 	fmt.Println("Regular:", regular/128)
+	fmt.Println("Regular FFT:", regularFFT/128)
+}
+
+// MakeLoops make worldline loops
+func MakeWeightsFFT(rnd *rand.Rand, N int) []float64 {
+	y := make([]complex128, 0, N)
+	y = append(y, 0)
+	for j := 1; j < N; j++ {
+		y = append(y, complex(rnd.NormFloat64(), rnd.NormFloat64()))
+	}
+	yt := fft.FFT(y)
+
+	/*min, max := math.MaxFloat64, -math.MaxFloat64
+	for i := 0; i < N; i++ {
+		r := real(yt[i])
+		if r < min {
+			min = r
+		}
+		if r > max {
+			max = r
+		}
+	}
+
+	norm := math.Abs(max - min)
+	weights := make([]float64, 0, N)
+	for i := 0; i < N; i++ {
+		weights = append(weights, real(yt[i])/norm)
+	}*/
+
+	weights := make([]float64, 0, N)
+	for i := 0; i < N; i++ {
+		weights = append(weights, real(yt[i]))
+	}
+
+	return weights
 }
 
 // Attentino is an attention base neural network
-func Attention(seed int64) int {
+func Attention(seed int64, fft bool) int {
 	rnd := rand.New(rand.NewSource(seed))
 	others := tf64.NewSet()
 	others.Add("input", 2, 4)
@@ -56,10 +103,21 @@ func Attention(seed int64) int {
 	set.Add("ab", 1, 1)
 	set.Add("bb", 1, 1)
 
-	for _, w := range set.Weights[:2] {
-		factor := math.Sqrt(2.0 / float64(w.S[0]))
-		for i := 0; i < cap(w.X); i++ {
-			w.X = append(w.X, rnd.NormFloat64()*factor)
+	if fft {
+		weights, weight := MakeWeightsFFT(rnd, 2+2+1+1), 0
+		for _, w := range set.Weights[:2] {
+			factor := math.Sqrt(2.0 / float64(w.S[0]))
+			for i := 0; i < cap(w.X); i++ {
+				w.X = append(w.X, weights[weight]*factor)
+				weight++
+			}
+		}
+	} else {
+		for _, w := range set.Weights[:2] {
+			factor := math.Sqrt(2.0 / float64(w.S[0]))
+			for i := 0; i < cap(w.X); i++ {
+				w.X = append(w.X, rnd.NormFloat64()*factor)
+			}
 		}
 	}
 
@@ -134,7 +192,11 @@ func Attention(seed int64) int {
 		scatter.GlyphStyle.Shape = draw.CircleGlyph{}
 		p.Add(scatter)
 
-		err = p.Save(8*vg.Inch, 8*vg.Inch, "cost_attention.png")
+		filename := "cost_attention.png"
+		if fft {
+			filename = "cost_attention_fft.png"
+		}
+		err = p.Save(8*vg.Inch, 8*vg.Inch, filename)
 		if err != nil {
 			panic(err)
 		}
@@ -144,7 +206,7 @@ func Attention(seed int64) int {
 }
 
 // Regular is a regular neural network
-func Regular(seed int64) int {
+func Regular(seed int64, fft bool) int {
 	rnd := rand.New(rand.NewSource(seed))
 	others := tf64.NewSet()
 	others.Add("input", 2, 4)
@@ -166,10 +228,21 @@ func Regular(seed int64) int {
 	set.Add("ab", 2, 1)
 	set.Add("bb", 1, 1)
 
-	for _, w := range set.Weights[:2] {
-		factor := math.Sqrt(2.0 / float64(w.S[0]))
-		for i := 0; i < cap(w.X); i++ {
-			w.X = append(w.X, rnd.NormFloat64()*factor)
+	if fft {
+		weights, weight := MakeWeightsFFT(rnd, 2*2+2+2+1), 0
+		for _, w := range set.Weights[:2] {
+			factor := math.Sqrt(2.0 / float64(w.S[0]))
+			for i := 0; i < cap(w.X); i++ {
+				w.X = append(w.X, weights[weight]*factor)
+				weight++
+			}
+		}
+	} else {
+		for _, w := range set.Weights[:2] {
+			factor := math.Sqrt(2.0 / float64(w.S[0]))
+			for i := 0; i < cap(w.X); i++ {
+				w.X = append(w.X, rnd.NormFloat64()*factor)
+			}
 		}
 	}
 
@@ -243,7 +316,11 @@ func Regular(seed int64) int {
 		scatter.GlyphStyle.Shape = draw.CircleGlyph{}
 		p.Add(scatter)
 
-		err = p.Save(8*vg.Inch, 8*vg.Inch, "cost_regular.png")
+		filename := "cost_regular.png"
+		if fft {
+			filename = "cost_regular_fft.png"
+		}
+		err = p.Save(8*vg.Inch, 8*vg.Inch, filename)
 		if err != nil {
 			panic(err)
 		}
