@@ -19,6 +19,36 @@ import (
 	"github.com/pointlander/gradient/tf64"
 )
 
+// Statistics captures statistics
+type Statistics struct {
+	Sum        float64
+	SumSquared float64
+	Count      int
+}
+
+// Add adds a statistic
+func (s *Statistics) Add(value float64) {
+	s.Sum += value
+	s.SumSquared += value * value
+	s.Count++
+}
+
+// StandardDeviation calculates the standard deviation
+func (s Statistics) StandardDeviation() float64 {
+	sum, count := s.Sum, float64(s.Count)
+	return math.Sqrt((s.SumSquared - sum*sum/count) / count)
+}
+
+// Average calculates the average
+func (s Statistics) Average() float64 {
+	return s.Sum / float64(s.Count)
+}
+
+// String returns the statistics as a string`
+func (s Statistics) String() string {
+	return fmt.Sprintf("%f +- %f", s.Average(), s.StandardDeviation())
+}
+
 func main() {
 	Attention(1, false)
 	Regular(1, false)
@@ -29,46 +59,46 @@ func main() {
 	IRISRegular(1, false)
 	IRISRegular(1, true)
 
-	attention := 0.0
+	attention := Statistics{}
 	for i := 0; i < 128; i++ {
-		attention += float64(Attention(int64(2+i), false))
+		attention.Add(float64(Attention(int64(2+i), false)))
 	}
-	attentionFFT := 0.0
+	attentionFFT := Statistics{}
 	for i := 0; i < 128; i++ {
-		attentionFFT += float64(Attention(int64(2+i), true))
+		attentionFFT.Add(float64(Attention(int64(2+i), true)))
 	}
-	irisAttention := 0.0
+	irisAttention := Statistics{}
 	for i := 0; i < 128; i++ {
-		irisAttention += float64(IRISAttention(int64(2+i), false))
+		irisAttention.Add(float64(IRISAttention(int64(2+i), false)))
 	}
-	irisAttentionFFT := 0.0
+	irisAttentionFFT := Statistics{}
 	for i := 0; i < 128; i++ {
-		irisAttentionFFT += float64(IRISAttention(int64(2+i), true))
+		irisAttentionFFT.Add(float64(IRISAttention(int64(2+i), true)))
 	}
-	regular := 0.0
+	regular := Statistics{}
 	for i := 0; i < 128; i++ {
-		regular += float64(Regular(int64(2+i), false))
+		regular.Add(float64(Regular(int64(2+i), false)))
 	}
-	regularFFT := 0.0
+	regularFFT := Statistics{}
 	for i := 0; i < 128; i++ {
-		regularFFT += float64(Regular(int64(2+i), true))
+		regularFFT.Add(float64(Regular(int64(2+i), true)))
 	}
-	irisRegular := 0.0
+	irisRegular := Statistics{}
 	for i := 0; i < 128; i++ {
-		irisRegular += float64(IRISRegular(int64(2+i), false))
+		irisRegular.Add(float64(IRISRegular(int64(2+i), false)))
 	}
-	irisRegularFFT := 0.0
+	irisRegularFFT := Statistics{}
 	for i := 0; i < 128; i++ {
-		irisRegularFFT += float64(IRISRegular(int64(2+i), true))
+		irisRegularFFT.Add(float64(IRISRegular(int64(2+i), true)))
 	}
-	fmt.Println("Attention:", attention/128)
-	fmt.Println("Attention FFT:", attentionFFT/128)
-	fmt.Println("IRIS Attention:", irisAttention/128)
-	fmt.Println("IRIS Attention FFT:", irisAttentionFFT/128)
-	fmt.Println("Regular:", regular/128)
-	fmt.Println("Regular FFT:", regularFFT/128)
-	fmt.Println("IRIS Regular:", irisRegular/128)
-	fmt.Println("IRIS Regular FFT:", irisRegularFFT/128)
+	fmt.Println("Attention:", attention)
+	fmt.Println("Attention FFT:", attentionFFT)
+	fmt.Println("IRIS Attention:", irisAttention)
+	fmt.Println("IRIS Attention FFT:", irisAttentionFFT)
+	fmt.Println("Regular:", regular)
+	fmt.Println("Regular FFT:", regularFFT)
+	fmt.Println("IRIS Regular:", irisRegular)
+	fmt.Println("IRIS Regular FFT:", irisRegularFFT)
 }
 
 // MakeLoops make worldline loops
